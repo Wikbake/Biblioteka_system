@@ -113,7 +113,7 @@
               </grid>
             </constraints>
             <properties>
-              <text value="Type"/>
+              <text value="Genre"/>
             </properties>
           </component>
           <component id="e12d1" class="javax.swing.JLabel">
@@ -352,17 +352,17 @@
               </grid>
             </constraints>
             <properties>
-              <text value="Add return"/>
+              <text value="Return date"/>
             </properties>
           </component>
-          <component id="14c83" class="javax.swing.JButton" binding="button1" default-binding="true">
+          <component id="14c83" class="javax.swing.JButton" binding="addReturnButton" default-binding="true">
             <constraints>
               <grid row="2" column="0" row-span="1" col-span="2" vsize-policy="0" hsize-policy="3" anchor="0" fill="1" indent="0" use-parent-layout="false">
                 <minimum-size width="100" height="23"/>
               </grid>
             </constraints>
             <properties>
-              <text value="Button"/>
+              <text value="Add return"/>
             </properties>
           </component>
           <component id="6b142" class="javax.swing.JTextField" binding="yyyyMmDdTextField" default-binding="true">
