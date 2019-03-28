@@ -22,7 +22,7 @@ public class Biblioteka_GUI extends JFrame {
   }
 
   private void addBookActionPerformed(ActionEvent e) {
-    System.out.println("Hello!"); // do zmodyfikowania 
+    System.out.println("Hello!"); // do zmodyfikowania
   }
 
   private JTextField exceededRentalTimeList;
