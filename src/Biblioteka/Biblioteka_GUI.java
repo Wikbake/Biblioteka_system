@@ -5,7 +5,12 @@ import javax.swing.plaf.nimbus.State;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.sql.*;
+import java.sql.Date;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.HashMap;
 import java.util.List;
 import java.util.ArrayList;
@@ -66,6 +71,13 @@ public class Biblioteka_GUI extends JFrame {
 
     addBookButton.addActionListener(this::addBookActionPerformed);
     addCustomerButton.addActionListener(this::addCustomerActionPerformed);
+    addWindowListener(new WindowAdapter() {
+      @Override
+      public void windowOpened(WindowEvent e) {
+        formWindowOpened(e);
+      }
+    });
+    rentalButton.addActionListener(this::addNewRentalActionPerformed);
   }
 
   Connection connection;
@@ -73,6 +85,12 @@ public class Biblioteka_GUI extends JFrame {
   private List<Customer> customers = new ArrayList<Customer>();
   private Map<Customer, List<Rental>> customersRentals = new HashMap<Customer, List<Rental>>();
   private Map<Customer, List<Rental>> rentals = new HashMap<Customer, List<Rental>>();
+
+  private void formWindowOpened(WindowEvent e) {
+    functionBook();
+    functionCustomer();
+
+  }
 
   private void addBookActionPerformed(ActionEvent e) {
     String bookName = bookNameEnter.getText();
@@ -165,6 +183,55 @@ public class Biblioteka_GUI extends JFrame {
     } catch (SQLException ex) {
       Logger.getLogger(Biblioteka_GUI.class.getName()).log(Level.SEVERE, null, ex);
     }
+  }
+
+  private void addNewRentalActionPerformed(ActionEvent e) {
+    String sqlq = "INSERT INTO Rented_books (Book_Id, Customer_Id, Rental_date, Book_name, Return_date) VALUES (?, ?, ?, ?, ?)";
+    try {
+      PreparedStatement statement = connection.prepareStatement(sqlq);
+      int index1 = booksComboBox.getSelectedIndex();
+      int index2 = clientsComboBox.getSelectedIndex();
+      Book book = books.get(index1);
+      Customer customer = customers.get(index2);
+      String date = rentalEnter.getText();
+      Date d = null;
+      SimpleDateFormat parserSDF = new SimpleDateFormat("yyyy-mm-dd");
+      if ("YES".equals(book.getAvailability())) {
+        try {
+          d = (Date) parserSDF.parse(date);
+        } catch (ParseException exc) {
+          Logger.getLogger(Biblioteka_GUI.class.getName()).log(Level.SEVERE, null, exc);
+        }
+        statement.setInt(1, book.getIdBook());
+        statement.setInt(2, customer.getIdCustomer());
+        Date sqlDate = new Date(d.getTime());
+        statement.setDate(3, sqlDate);
+        statement.setString(4, book.getBookName());
+        long da = d.getTime() + 14 * 60 * 60 * 24 * 1000;
+        Date sqlDate1 = new Date(da);
+        statement.setDate(5, sqlDate1);
+        statement.executeUpdate();
+
+        DefaultListModel model = new DefaultListModel();
+        model.addElement(book.getBookName() + " " + parserSDF.format(d));
+        rentalList.setModel(model);
+        String notAvailable = "NO";
+        book.setAvailability(notAvailable);
+        String sqlUpd = "UPDATE Books SET Availability = 'NO' WHERE Book_Id = (?)";
+        PreparedStatement statementUpd = connection.prepareStatement(sqlUpd);
+        statementUpd.setInt(1, book.getIdBook());
+        statementUpd.executeUpdate();
+        updateBooks();
+      }
+    } catch (SQLException ex) {
+      ex.printStackTrace();
+    }
+  }
+
+  private void updateBooks() {
+    booksComboBox.removeAllItems();
+    for (Book b : books)
+      booksComboBox.addItem("Id: " + b.getIdBook() + " Name: " + b.getBookName() + " Cost: " + b.getCost() + "zl. Available: " + b.getAvailability());
   }
 
 
