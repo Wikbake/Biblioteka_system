@@ -1,13 +1,15 @@
 package Biblioteka;
 
 import javax.swing.*;
+import javax.swing.plaf.nimbus.State;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.SQLException;
-import java.sql.Statement;
+import java.sql.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.ArrayList;
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -62,20 +64,109 @@ public class Biblioteka_GUI extends JFrame {
     this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
     pack();
 
-    addBookButton.addActionListener(new ActionListener() {
-      @Override
-      public void actionPerformed(ActionEvent e) {
-        addBookActionPerformed(e);
-      }
-    });
+    addBookButton.addActionListener(this::addBookActionPerformed);
+    addCustomerButton.addActionListener(this::addCustomerActionPerformed);
   }
 
   Connection connection;
-
+  private List<Book> books = new ArrayList<Book>();
+  private List<Customer> customers = new ArrayList<Customer>();
+  private Map<Customer, List<Rental>> customersRentals = new HashMap<Customer, List<Rental>>();
+  private Map<Customer, List<Rental>> rentals = new HashMap<Customer, List<Rental>>();
 
   private void addBookActionPerformed(ActionEvent e) {
-    System.out.println("Hello!"); // do zmodyfikowania
+    String bookName = bookNameEnter.getText();
+    float cost = Float.parseFloat(costEnter.getText());
+    int year = Integer.parseInt(yearEnter.getText());
+    String genre = typeEnter.getText();
+    String author = authorEnter.getText();
+    int age = Integer.parseInt(ageEnter.getText());
+    String availability = availabilityEnter.getText();
+
+    String sqlq = "INSERT INTO Books (Book_name, Cost, YearOfPublishment, Genre, Author, Age, Availability) VALUES (?, ?, ?, ?, ?, ?, ?)";
+    PreparedStatement ps;
+    try {
+      ps = connection.prepareStatement(sqlq);
+      ps.setString(1, bookName);
+      ps.setFloat(2, cost);
+      ps.setInt(3, year);
+      ps.setString(4, genre);
+      ps.setString(5, author);
+      ps.setInt(6, age);
+      ps.setString(7, availability);
+      ps.executeUpdate();
+
+      booksComboBox.removeAllItems();
+      functionBook();
+    } catch (SQLException ex) {
+      Logger.getLogger(Biblioteka_GUI.class.getName()).log(Level.SEVERE, null, ex);
+    }
   }
+
+  private void addCustomerActionPerformed(ActionEvent e) {
+    String n1 = nameEnter.getText();
+    String s1 = surnameEnter.getText();
+    String a1 = adressEnter.getText();
+    int p1 = Integer.parseInt(phoneEnter.getText());
+
+    String sqlq = "INSERT INTO Customers(Surname, Name, Adress, Phone) VALUES (?, ?, ?, ?)";
+    PreparedStatement ps;
+    try {
+      ps = connection.prepareStatement(sqlq);
+      ps.setString(1, n1);
+      ps.setString(2, s1);
+      ps.setString(3, a1);
+      ps.setInt(4, p1);
+      ps.executeUpdate();
+
+      clientsComboBox.removeAllItems();
+      functionCustomer();
+    } catch (SQLException ex) {
+      Logger.getLogger(Biblioteka_GUI.class.getName()).log(Level.SEVERE, null, ex);
+    }
+  }
+
+  public void functionBook() {
+    try {
+      Statement statement = connection.createStatement();
+      ResultSet rs = statement.executeQuery("SELECT Book_Id, Book_name, Cost, YearOfPublishment, Genre, Author, Age, Availability FROM Books");
+      while (rs.next()) {
+        int id1 = rs.getInt("Book_Id");
+        String n1 = rs.getString("Book_name");
+        float c1 = rs.getFloat("Cost");
+        int y1 = rs.getInt("YearOfPublishment");
+        String g1 = rs.getString("Genre");
+        String a1 = rs.getString("Author");
+        int age1 = rs.getInt("Age");
+        String ava1 = rs.getString("Availability");
+        booksComboBox.addItem("Id: " + id1 + " Name: " + n1 + " Cost: " + c1 + "zl. Available: " + ava1);
+        Book book = new Book(id1, n1, c1, y1, g1, a1, age1, ava1);
+        books.add(book);
+      }
+    } catch (SQLException ex) {
+      Logger.getLogger(Biblioteka_GUI.class.getName()).log(Level.SEVERE, null, ex);
+    }
+  }
+
+  public void functionCustomer() {
+    try {
+      Statement statement = connection.createStatement();
+      ResultSet rs = statement.executeQuery("SELECT Customer_Id, Surname, Name, Adress, Phone FROM Customers");
+      while (rs.next()) {
+        int id1 = rs.getInt("Customer_Id");
+        String s1 = rs.getString("Surname");
+        String n1 = rs.getString("Name");
+        String a1 = rs.getString("Adress");
+        int p1 = rs.getInt("Phone");
+        clientsComboBox.addItem(id1 + " " + s1 + " " + n1 + " " + a1 + " " + p1);
+        Customer customer = new Customer(id1, s1, n1, a1, p1);
+        customers.add(customer);
+      }
+    } catch (SQLException ex) {
+      Logger.getLogger(Biblioteka_GUI.class.getName()).log(Level.SEVERE, null, ex);
+    }
+  }
+
 
   private JTextField exceededRentalTimeList;
   private JTextField bookNameEnter;
@@ -105,7 +196,6 @@ public class Biblioteka_GUI extends JFrame {
   public static void main(String[] args) {
     EventQueue.invokeLater(() -> new Biblioteka_GUI().setVisible(true));
   }
-
 
 
   {
@@ -202,7 +292,7 @@ public class Biblioteka_GUI extends JFrame {
     final com.intellij.uiDesigner.core.Spacer spacer2 = new com.intellij.uiDesigner.core.Spacer();
     panel1.add(spacer2, new com.intellij.uiDesigner.core.GridConstraints(5, 0, 1, 2, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_VERTICAL, 1, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_WANT_GROW, null, new Dimension(18, 18), new Dimension(18, 18), 0, false));
     addCustomerButton = new JButton();
-    addCustomerButton.setText("Add client");
+    addCustomerButton.setText("Add customer");
     panel1.add(addCustomerButton, new com.intellij.uiDesigner.core.GridConstraints(4, 1, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_EAST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, new Dimension(79, 23), new Dimension(100, 23), new Dimension(100, 23), 0, false));
     final JLabel label13 = new JLabel();
     label13.setText("Clients");
@@ -275,7 +365,6 @@ public class Biblioteka_GUI extends JFrame {
   public JComponent $$$getRootComponent$$$() {
     return Library;
   }
-
 
 
 }
