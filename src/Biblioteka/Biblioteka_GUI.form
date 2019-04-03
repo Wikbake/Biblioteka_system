@@ -146,7 +146,7 @@
               <text value="Availability"/>
             </properties>
           </component>
-          <component id="e0c67" class="javax.swing.JButton" binding="booksButton">
+          <component id="e0c67" class="javax.swing.JButton" binding="addBookButton">
             <constraints>
               <grid row="7" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="4" fill="0" indent="0" use-parent-layout="false">
                 <minimum-size width="79" height="23"/>
@@ -264,7 +264,7 @@
               </grid>
             </constraints>
           </vspacer>
-          <component id="af930" class="javax.swing.JButton" binding="clientsButton">
+          <component id="af930" class="javax.swing.JButton" binding="addCustomerButton">
             <constraints>
               <grid row="4" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="4" fill="0" indent="0" use-parent-layout="false">
                 <minimum-size width="79" height="23"/>
@@ -273,7 +273,7 @@
               </grid>
             </constraints>
             <properties>
-              <text value="Add client"/>
+              <text value="Add customer"/>
             </properties>
           </component>
           <component id="76018" class="javax.swing.JLabel">
