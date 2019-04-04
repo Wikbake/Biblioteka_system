@@ -36,7 +36,7 @@ public class ExceededRentalTime extends Thread{
                         if (r.getIdBook() == b.getIdBook() && "No".equals(b.getAvailability())) {
                             Date z = r.getDateReturn();
                             long dz = z.getTime();
-                            if (ds - dz > 30)
+                            if (ds - dz > 14)
                                 notifications += ("Customer: " + customers.get(i).getSurname() + " " + customers.get(i).getName() + " exceeded return date of the book: " + b.getBookName());
                         }
         }
