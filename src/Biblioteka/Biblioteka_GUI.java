@@ -1,12 +1,8 @@
 package Biblioteka;
 
 import javax.swing.*;
-import javax.swing.plaf.nimbus.State;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.awt.event.WindowAdapter;
-import java.awt.event.WindowEvent;
+import java.awt.event.*;
 import java.sql.*;
 import java.sql.Date;
 import java.text.ParseException;
@@ -78,18 +74,47 @@ public class Biblioteka_GUI extends JFrame {
       }
     });
     rentalButton.addActionListener(this::addNewRentalActionPerformed);
+    addReturnButton.addActionListener(this::addReturnActionPerformed);
+    clientsComboBox.addItemListener(this::clientsComboBoxItemStateChanged);
   }
 
   Connection connection;
   private List<Book> books = new ArrayList<Book>();
   private List<Customer> customers = new ArrayList<Customer>();
   private Map<Customer, List<Rental>> customersRentals = new HashMap<Customer, List<Rental>>();
-  private Map<Customer, List<Rental>> rentals = new HashMap<Customer, List<Rental>>();
+  private Map<Customer, List<Return>> customersReturns = new HashMap<Customer, List<Return>>();
 
   private void formWindowOpened(WindowEvent e) {
     functionBook();
     functionCustomer();
 
+    Map<Customer, List<Rental>> customersRentalsTmp = new HashMap<>();
+    int sizeC = customers.size();
+    for (Customer c : customers) {
+      String sqlq = "SELECT Rental_Id, Book_Id, Rental_date, Book_name, Return_date FROM Rented_books WHERE Customer_Id = ?";
+      try {
+        PreparedStatement statement = connection.prepareStatement(sqlq);
+        int idCust = c.getIdCustomer();
+        statement.setInt(1, idCust);
+        ResultSet rs = statement.executeQuery();
+
+        List<Rental> customersRentalTmp = new ArrayList<>();
+        while (rs.next()) {
+          int idRent = rs.getInt("Rental_Id");
+          int idBook = rs.getInt("Book_Id");
+          Date dateRent = rs.getDate("Rental_date");
+          String name = rs.getString("Book_name");
+          Date dateRetu = rs.getDate("Return_date");
+          Rental rental = new Rental(idRent, idBook, name, dateRetu, dateRent);
+          customersRentalTmp.add(rental);
+        }
+        customersRentalsTmp.put(c, customersRentalTmp);
+      } catch (SQLException ex) {
+        ex.printStackTrace();
+      }
+    }
+    Thread exceeded = new ExceededRentalTime(customers, customersRentalsTmp, books, exceededRentalTimeList);
+    exceeded.start();
   }
 
   private void addBookActionPerformed(ActionEvent e) {
@@ -121,6 +146,28 @@ public class Biblioteka_GUI extends JFrame {
     }
   }
 
+  public void functionBook() {
+    try {
+      Statement statement = connection.createStatement();
+      ResultSet rs = statement.executeQuery("SELECT Book_Id, Book_name, Cost, YearOfPublishment, Genre, Author, Age, Availability FROM Books");
+      while (rs.next()) {
+        int id1 = rs.getInt("Book_Id");
+        String n1 = rs.getString("Book_name");
+        float c1 = rs.getFloat("Cost");
+        int y1 = rs.getInt("YearOfPublishment");
+        String g1 = rs.getString("Genre");
+        String a1 = rs.getString("Author");
+        int age1 = rs.getInt("Age");
+        String ava1 = rs.getString("Availability");
+        booksComboBox.addItem("Id: " + id1 + " Name: " + n1 + " Cost: " + c1 + "zl. Available: " + ava1);
+        Book book = new Book(id1, n1, c1, y1, g1, a1, age1, ava1);
+        books.add(book);
+      }
+    } catch (SQLException ex) {
+      Logger.getLogger(Biblioteka_GUI.class.getName()).log(Level.SEVERE, null, ex);
+    }
+  }
+
   private void addCustomerActionPerformed(ActionEvent e) {
     String n1 = nameEnter.getText();
     String s1 = surnameEnter.getText();
@@ -139,28 +186,6 @@ public class Biblioteka_GUI extends JFrame {
 
       clientsComboBox.removeAllItems();
       functionCustomer();
-    } catch (SQLException ex) {
-      Logger.getLogger(Biblioteka_GUI.class.getName()).log(Level.SEVERE, null, ex);
-    }
-  }
-
-  public void functionBook() {
-    try {
-      Statement statement = connection.createStatement();
-      ResultSet rs = statement.executeQuery("SELECT Book_Id, Book_name, Cost, YearOfPublishment, Genre, Author, Age, Availability FROM Books");
-      while (rs.next()) {
-        int id1 = rs.getInt("Book_Id");
-        String n1 = rs.getString("Book_name");
-        float c1 = rs.getFloat("Cost");
-        int y1 = rs.getInt("YearOfPublishment");
-        String g1 = rs.getString("Genre");
-        String a1 = rs.getString("Author");
-        int age1 = rs.getInt("Age");
-        String ava1 = rs.getString("Availability");
-        booksComboBox.addItem("Id: " + id1 + " Name: " + n1 + " Cost: " + c1 + "zl. Available: " + ava1);
-        Book book = new Book(id1, n1, c1, y1, g1, a1, age1, ava1);
-        books.add(book);
-      }
     } catch (SQLException ex) {
       Logger.getLogger(Biblioteka_GUI.class.getName()).log(Level.SEVERE, null, ex);
     }
@@ -194,11 +219,11 @@ public class Biblioteka_GUI extends JFrame {
       Book book = books.get(index1);
       Customer customer = customers.get(index2);
       String date = rentalEnter.getText();
-      Date d = null;
+      java.util.Date d = null;
       SimpleDateFormat parserSDF = new SimpleDateFormat("yyyy-mm-dd");
       if ("YES".equals(book.getAvailability())) {
         try {
-          d = (Date) parserSDF.parse(date);
+          d = parserSDF.parse(date);
         } catch (ParseException exc) {
           Logger.getLogger(Biblioteka_GUI.class.getName()).log(Level.SEVERE, null, exc);
         }
@@ -228,10 +253,125 @@ public class Biblioteka_GUI extends JFrame {
     }
   }
 
+  private void addReturnActionPerformed(ActionEvent e) {
+    String sqlq = "INSERT INTO Returns (Rental_Id, Book_name, Customer_Id, Return_date) VALUES (?, ?, ?, ?)";
+    try {
+      PreparedStatement statement = connection.prepareStatement(sqlq);
+      int indexRental = rentalList.getSelectedIndex();
+      int indexCustomer = clientsComboBox.getSelectedIndex();
+      Customer customer = customers.get(indexCustomer);
+      Rental rental = customersRentals.get(customer).get(indexRental);
+      String date = returnEnter.getText();
+      java.util.Date d = null;
+      SimpleDateFormat parserSDF = new SimpleDateFormat("yyyy-mm-dd");
+      try {
+        d = parserSDF.parse(date);
+      } catch (ParseException ex) {
+        Logger.getLogger(Biblioteka_GUI.class.getName()).log(Level.SEVERE, null, ex);
+      }
+      statement.setInt(1, rental.idRental);
+      statement.setString(2, rental.getBookName());
+      statement.setInt(3, customer.getIdCustomer());
+      Date sqlDate = new Date(d.getTime());
+      statement.setDate(4, sqlDate);
+      statement.executeUpdate();
+
+      DefaultListModel model = new DefaultListModel();
+      model.addElement(rental.getBookName() + " " + parserSDF.format(d));
+      returnList.setModel(model);
+      String available = "YES";
+      String sqlUpd = "UPDATE Books SET Availability = 'YES' WHERE Book_Id = (?)";
+      PreparedStatement statementUpd = connection.prepareStatement(sqlUpd);
+      statementUpd.setInt(1, rental.getIdBook());
+      statementUpd.executeUpdate();
+      for (Book b : books)
+        if (b.getIdBook() == rental.getIdBook())
+          b.setAvailability(available);
+      updateBooks();
+    } catch (SQLException ex) {
+      ex.printStackTrace();
+    }
+  }
+
   private void updateBooks() {
     booksComboBox.removeAllItems();
     for (Book b : books)
       booksComboBox.addItem("Id: " + b.getIdBook() + " Name: " + b.getBookName() + " Cost: " + b.getCost() + "zl. Available: " + b.getAvailability());
+  }
+
+  private void clientsComboBoxItemStateChanged(ItemEvent evt) {
+    clientsComboRentalListResetting();
+    clientsComboReturnListResetting();
+  }
+
+  private void clientsComboRentalListResetting() {
+    String sqlq = "SELECT Rental_Id, Book_Id, Rental_date, Book_name, Return_date FROM Rented_books WHERE Customer_Id = ?";
+    try {
+      rentalList.setToolTipText(" ");
+      PreparedStatement statement = connection.prepareStatement(sqlq);
+      int index = clientsComboBox.getSelectedIndex();
+      if (index > 0 && clientsComboBox.getItemCount() > index) {
+        Customer customer = customers.get(index);
+        int idCustomer = customer.getIdCustomer();
+        statement.setInt(1, idCustomer);
+
+        ResultSet rs = statement.executeQuery();
+        List<Rental> customersRental = new ArrayList<Rental>();
+        while (rs.next()) {
+          int idRent = rs.getInt("Rental_Id");
+          int idBook = rs.getInt("Book_Id");
+          java.util.Date dateRent = rs.getDate("Rental_date");
+          String name = rs.getString("Book_name");
+          java.util.Date dateRetu = rs.getDate("Return_date");
+          Rental rental = new Rental(idRent, idBook, name, dateRetu, dateRent);
+          customersRental.add(rental);
+        }
+        DefaultListModel model = new DefaultListModel();
+        for (Rental r : customersRental) {
+          model.addElement(r.getBookName() + " " + r.getDateRental());
+          System.out.println(r.getBookName() + " " + r.getDateRental() + " ======>Test");
+        }
+
+        rentalList.setModel(model);
+
+        System.out.println("More test");
+
+        customersRentals.put(customer, customersRental);
+      }
+    } catch (SQLException ex) {
+      ex.printStackTrace();
+    }
+  }
+
+  private void clientsComboReturnListResetting() {
+    String sqlq = "SELECT Rental_Id, Book_name, Return_date FROM Returns WHERE Customer_Id = ?";
+    try {
+      rentalList.setToolTipText(" ");
+      PreparedStatement statement = connection.prepareStatement(sqlq);
+      int index = clientsComboBox.getSelectedIndex();
+      if (index > 0 && clientsComboBox.getItemCount() > index) {
+        Customer customer = customers.get(index);
+        int idCustomer = customer.getIdCustomer();
+        statement.setInt(1, idCustomer);
+
+        ResultSet rs = statement.executeQuery();
+        List<Return> customersReturnTmp = new ArrayList<Return>();
+        while (rs.next()) {
+          int idRent = rs.getInt("Rental_Id");
+          String name = rs.getString("Book_name");
+          java.util.Date dateRetu = rs.getDate("Return_date");
+          Return returnA = new Return(idRent, 0, name, null, null, dateRetu);
+          customersReturnTmp.add(returnA);
+        }
+        DefaultListModel model = new DefaultListModel();
+        for (Return r : customersReturnTmp)
+          model.addElement(r.getBookName() + " " + r.getDateReturnCustomer());
+        rentalList.setModel(model);
+        customersReturns.put(customer, customersReturnTmp);
+      }
+    } catch (SQLException ex) {
+      ex.printStackTrace();
+    }
   }
 
 
@@ -257,7 +397,7 @@ public class Biblioteka_GUI extends JFrame {
   private JButton rentalButton;
   private JList rentalList;
   private JList returnList;
-  private JTextField yyyyMmDdTextField;
+  private JTextField returnEnter;
   private JButton addReturnButton;
 
   public static void main(String[] args) {
@@ -389,9 +529,9 @@ public class Biblioteka_GUI extends JFrame {
     addReturnButton = new JButton();
     addReturnButton.setText("Add return");
     panel2.add(addReturnButton, new com.intellij.uiDesigner.core.GridConstraints(2, 0, 1, 2, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, new Dimension(100, 23), null, null, 0, false));
-    yyyyMmDdTextField = new JTextField();
-    yyyyMmDdTextField.setText("yyyy-mm-dd");
-    panel2.add(yyyyMmDdTextField, new com.intellij.uiDesigner.core.GridConstraints(1, 1, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_WANT_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, new Dimension(100, 30), new Dimension(100, 30), null, 0, false));
+    returnEnter = new JTextField();
+    returnEnter.setText("yyyy-mm-dd");
+    panel2.add(returnEnter, new com.intellij.uiDesigner.core.GridConstraints(1, 1, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_WANT_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, new Dimension(100, 30), new Dimension(100, 30), null, 0, false));
     final JPanel panel3 = new JPanel();
     panel3.setLayout(new com.intellij.uiDesigner.core.GridLayoutManager(4, 5, new Insets(0, 0, 0, 0), -1, -1));
     Library.add(panel3, new com.intellij.uiDesigner.core.GridConstraints(1, 0, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_BOTH, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
