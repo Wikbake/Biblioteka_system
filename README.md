@@ -1,3 +1,5 @@
 # Biblioteka_system
-This is a system wich will help administrators to controll their books and customers. Moreover it will bring opportunity to create their own databases. 
+This is a system wich will help administrators to controll their books and customers. It consists of: 
+- GUI (graphical user interface), 
+- read/write to a relational database.
 (Still in progress)
