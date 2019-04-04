@@ -12,9 +12,9 @@ public class ExceededRentalTime extends Thread{
     List<Customer> customers;
     Map<Customer, List<Rental>> customersRentals;
     List<Book> books;
-    TextField textField;
+    JTextField textField;
 
-    ExceededRentalTime(List<Customer> customers, Map<Customer, List<Rental>> customersRentals, List<Book> books, TextField textField) {
+    ExceededRentalTime(List<Customer> customers, Map<Customer, List<Rental>> customersRentals, List<Book> books, JTextField textField) {
         this.customers = customers;
         this.customersRentals = customersRentals;
         this.books = books;
