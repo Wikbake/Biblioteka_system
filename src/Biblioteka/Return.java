@@ -17,6 +17,6 @@ public class Return extends Rental{
 
     @Override
     public int hashCode() {
-        return bookName.hashCode();
+        return getBookName().hashCode();
     }
 }

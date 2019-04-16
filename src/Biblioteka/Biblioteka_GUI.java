@@ -269,7 +269,7 @@ public class Biblioteka_GUI extends JFrame {
       } catch (ParseException ex) {
         Logger.getLogger(Biblioteka_GUI.class.getName()).log(Level.SEVERE, null, ex);
       }
-      statement.setInt(1, rental.idRental);
+      statement.setInt(1, rental.getIdRental());
       statement.setString(2, rental.getBookName());
       statement.setInt(3, customer.getIdCustomer());
       Date sqlDate = new Date(d.getTime());
@@ -302,6 +302,9 @@ public class Biblioteka_GUI extends JFrame {
   private void clientsComboBoxItemStateChanged(ItemEvent evt) {
     clientsComboRentalListResetting();
     clientsComboReturnListResetting();
+      for (Book b : books)
+          System.out.println(
+                  "Id: " + b.getIdBook() + " Name: " + b.getBookName() + " Cost: " + b.getCost() + "zl. Available: " + b.getAvailability());
   }
 
   private void clientsComboRentalListResetting() {
@@ -346,7 +349,7 @@ public class Biblioteka_GUI extends JFrame {
   private void clientsComboReturnListResetting() {
     String sqlq = "SELECT Rental_Id, Book_name, Return_date FROM Returns WHERE Customer_Id = ?";
     try {
-      rentalList.setToolTipText(" ");
+      returnList.setToolTipText(" ");
       PreparedStatement statement = connection.prepareStatement(sqlq);
       int index = clientsComboBox.getSelectedIndex();
       if (index > 0 && clientsComboBox.getItemCount() > index) {
@@ -366,7 +369,7 @@ public class Biblioteka_GUI extends JFrame {
         DefaultListModel model = new DefaultListModel();
         for (Return r : customersReturnTmp)
           model.addElement(r.getBookName() + " " + r.getDateReturnCustomer());
-        rentalList.setModel(model);
+        returnList.setModel(model);
         customersReturns.put(customer, customersReturnTmp);
       }
     } catch (SQLException ex) {

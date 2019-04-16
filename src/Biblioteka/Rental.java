@@ -4,11 +4,11 @@ import java.util.Date;
 
 public class Rental {
 
-  int idRental;
-  int idBook;
-  String bookName;
-  Date dateReturn;
-  Date dateRental;
+  private int idRental;
+  private int idBook;
+  private String bookName;
+  private Date dateReturn;
+  private Date dateRental;
 
   public int getIdRental() { return idRental; }
   public int getIdBook() { return idBook; }
